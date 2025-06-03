@@ -3,12 +3,18 @@ import Account from './models/accountModel.js';
 import express from 'express';
 import { connect } from 'mongoose';
 
+import multer from 'multer';
+const upload = multer({ dest: 'uploads/' });
+
 const app = express();
+
+import cors from 'cors';
+app.use(cors());
 
 // Middleware to parse JSON data
 app.use(express.json());
 
-// Connect to MongoDB
+// Connect to MongoDB before defining routes
 connect('mongodb://localhost:27017/virtualbank')
   .then(() => {
     console.log('Connected to MongoDB');
@@ -22,6 +28,32 @@ connect('mongodb://localhost:27017/virtualbank')
     console.log('Nepavyko prisijungti prie serverio', err);
     process.exit(1); // Exit the process if DB connection fails
   });
+
+app.post('/test/create-user', upload.single('passportCopy'), async (req, res) => {
+  try {
+    const { firstName, lastName, personalCode, password } = req.body;
+    if (!firstName || !lastName || !personalCode || !password || !req.file) {
+      return res.status(400).json({ message: 'Visi laukai privalomi' });
+    }
+    // Patikrinimas ar vartotojas jau egzistuoja
+    const existingUser = await User.findOne({ personalCode });
+    if (existingUser) {
+      return res.status(409).json({ message: 'User with this personal code already exists' });
+    }
+    // Sukuriamas naujas vartotojas
+    const user = new User({
+      firstName,
+      lastName,
+      personalCode,
+      password,
+      passportCopy: req.file.filename
+    });
+    await user.save();
+    res.status(201).json({ message: 'User created successfully', user });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to create user', error: error.message });
+  }
+});
 
 // Basic route to test server
 app.get('/', (req, res) => {
@@ -52,28 +84,8 @@ function isValidPersonalCode(code) {
   return digits[10] === control;
 }
 
+// (First occurrence kept)
 
-// Test route to create a new user
-app.post('/test/create-user', async (req, res) => {
-  try {
-    const { firstName, lastName, personalCode, password } = req.body;
-    if (!firstName || !lastName || !personalCode || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-    if (!isValidPersonalCode(personalCode)) {
-      return res.status(400).json({ message: 'Invalid personal code' });
-    }
-    const existingUser = await User.findOne({ personalCode });
-    if (existingUser) {
-      return res.status(409).json({ message: 'User with this personal code already exists' });
-    }
-    const user = new User({ firstName, lastName, personalCode, password });
-    await user.save();
-    res.status(201).json({ message: 'User created successfully', user });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to create user', error: error.message });
-  }
-});
 
 // Helper function to generate a random IBAN (simple version for demo)
 function generateIban() {
@@ -101,7 +113,7 @@ app.post('/accounts', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     const iban = generateIban();
-    const account = new Account({ userId, iban, balance: 0 }); // Always 0 balance
+   const account = new Account({ user: userId, iban, balance: 0 });
     await account.save();
     res.status(201).json({ message: 'Account created successfully', account });
   } catch (error) {

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <title>Nuskaičiuoti lėšas</title>
+</head>
+<body>
+    <h1>Nuskaičiuoti lėšas</h1>
+    <div>
+        <strong>Savininkas:</strong> <span id="owner"></span><br>
+        <strong>Sąskaitos numeris:</strong> <span id="iban"></span><br>
+        <strong>Likutis:</strong> <span id="balance"></span> €
+    </div>
+    <form id="withdraw-funds-form">
+        <label>Suma: <input type="number" name="amount" min="0.01" step="0.01" required></label>
+        <button type="submit">Nuskaičiuoti</button>
+    </form>
+    <a href="index.html">Grįžti į sąrašą</a>
+    <script>
+        // Gauti accountId iš URL
+        const params = new URLSearchParams(window.location.search);
+        const accountId = params.get('accountId');
+
+        // Užkrauti duomenis iš serverio
+        async function loadAccount() {
+            if (!accountId) {
+                alert('Nerastas sąskaitos ID.');
+                return;
+            }
+            try {
+                const response = await fetch(`/api/accounts/${accountId}`);
+                if (!response.ok) throw new Error('Nepavyko gauti duomenų');
+                const data = await response.json();
+                document.getElementById('owner').textContent = data.owner;
+                document.getElementById('iban').textContent = data.iban;
+                document.getElementById('balance').textContent = data.balance.toFixed(2);
+            } catch (err) {
+                alert('Klaida gaunant sąskaitos duomenis.');
+            }
+        }
+
+        // Formos pateikimas
+        document.getElementById('withdraw-funds-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const amount = parseFloat(this.amount.value);
+            if (isNaN(amount) || amount <= 0) {
+                alert('Įveskite teisingą sumą.');
+                return;
+            }
+            try {
+                const response = await fetch(`/api/accounts/${accountId}/withdraw`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount })
+                });
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(error.message || 'Nepavyko nuskaičiuoti lėšų.');
+                    return;
+                }
+                alert('Lėšos sėkmingai nuskaičiuotos.');
+                loadAccount();
+            } catch (err) {
+                alert('Klaida nuskaičiuojant lėšas.');
+            }
+        });
+
+        loadAccount();
+    </script>
+</body>
+</html>

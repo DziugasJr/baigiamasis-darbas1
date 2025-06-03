@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <title>Pridėti lėšų</title>
+</head>
+<body>
+    <h1>Pridėti lėšų</h1>
+    <div>
+        <strong>Savininkas:</strong> <span id="owner"></span><br>
+        <strong>Sąskaitos numeris:</strong> <span id="iban"></span><br>
+        <strong>Likutis:</strong> <span id="balance"></span> €
+    </div>
+    <form id="add-funds-form">
+        <label>Suma: <input type="number" name="amount" min="0.01" step="0.01" required></label>
+        <button type="submit">Pridėti</button>
+    </form>
+    <a href="index.html">Grįžti į sąrašą</a>
+    <script>
+        // Gauti accountId iš URL
+        const params = new URLSearchParams(window.location.search);
+        const accountId = params.get('accountId');
+
+        // Užkrauti duomenis iš serverio (pavyzdys)
+        fetch(`/api/accounts/${accountId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('owner').textContent = data.owner;
+                document.getElementById('iban').textContent = data.iban;
+                document.getElementById('balance').textContent = data.balance.toFixed(2);
+            });
+
+        // Formos pateikimas
+        document.getElementById('add-funds-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const amount = parseFloat(this.amount.value);
+            fetch(`/api/accounts/${accountId}/add-funds`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('balance').textContent = data.balance.toFixed(2);
+                alert('Lėšos sėkmingai pridėtos!');
+            })
+            .catch(() => alert('Įvyko klaida pridedant lėšas.'));
+        });
+    </script>
+</body>
+</html>

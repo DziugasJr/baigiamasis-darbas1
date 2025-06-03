@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <title>Nauja sąskaita</title>
+</head>
+<body>
+    <h1>Sukurti naują sąskaitą</h1>
+    <form id="new-account-form" enctype="multipart/form-data">
+        <label>Vardas: <input type="text" name="firstName" required></label><br>
+        <label>Pavardė: <input type="text" name="lastName" required></label><br>
+        <label>Asmens kodas: <input type="text" name="personalCode" required></label><br>
+        <label>Slaptažodis: <input type="password" name="password" required></label><br>
+        <label>Paso kopija: <input type="file" name="passportCopy" accept="image/*" required></label><br>
+        <button type="submit">Sukurti</button>
+    </form>
+    <div id="message"></div>
+    <a href="index.html">Grįžti į sąrašą</a>
+    <script>
+        document.getElementById('new-account-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+
+            try {
+        const response = await fetch('http://localhost:3000/test/create-user', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (response.ok) {
+            document.getElementById('message').textContent = 'Sąskaita sukurta sėkmingai!';
+            setTimeout(() => window.location.href = 'index.html', 1500);
+        } else {
+            document.getElementById('message').textContent = data.message || 'Klaida kuriant sąskaitą';
+        }
+    } catch (err) {
+        document.getElementById('message').textContent = 'Serverio klaida';
+    }
+});
+
+
+
+    </script>
+</body>
+</html>

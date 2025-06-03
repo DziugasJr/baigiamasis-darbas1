@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <title>Virtualus Bankas</title>
+</head>
+<body>
+    
+    <h1>Sąskaitų sąrašas</h1>
+    <button onclick="window.location.href='new-account.html'">Sukurti naują sąskaitą</button>
+    <ul id="accounts-list">
+       
+    </ul>
+    <script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const ul = document.getElementById('accounts-list');
+    ul.innerHTML = 'Kraunama...';
+
+    try {
+        const response = await fetch('http://localhost:3000/accounts');
+        const accounts = await response.json();
+
+        ul.innerHTML = '';
+        if (!accounts.length) {
+            ul.innerHTML = '<li>Nėra sąskaitų</li>';
+        } else {
+            accounts.forEach(acc => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    ${acc.user?.firstName || ''} ${acc.user?.lastName || ''} (IBAN: ${acc.iban}) - Likutis: ${acc.balance ?? 0}€
+                    <button onclick="deleteAccount('${acc._id}')">Ištrinti</button>
+                    <a href="add-funds.html?accountId=${acc._id}">Pridėti lėšų</a>
+                    <a href="withdraw-funds.html?accountId=${acc._id}">Nuskaičiuoti lėšas</a>
+                `;
+                ul.appendChild(li);
+            });
+        }
+    } catch (err) {
+        ul.innerHTML = '<li>Klaida gaunant sąskaitas</li>';
+    }
+});
+
+async function deleteAccount(id) {
+    if (!confirm('Ar tikrai ištrinti sąskaitą?')) return;
+    await fetch(`http://localhost:3000/accounts/${id}`, { method: 'DELETE' });
+    location.reload();
+}
+    </script>
+</body>
+</html>
